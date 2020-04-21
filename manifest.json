@@ -1,0 +1,9 @@
+{
+  "domain": "pollenniva",
+  "name": "Pollennivåer",
+  "documentation": "",
+  "dependencies": [],
+  "after_dependencies": ["http"],
+  "codeowners": ["@iesus"],
+  "requirements": []
+}
