@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+from datetime import timedelta
 import requests, json
 
 import logging
@@ -16,6 +17,8 @@ CONF_SENSORS = 'sensors'
 SENSOR_OPTIONS = {
     'city': ('Stad')
 }
+
+SCAN_INTERVAL = timedelta(hours=4)
 
 SENSOR_ICONS = {
     'Al': 'mdi:leaf',
@@ -53,14 +56,13 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
                 allergens.append({
                     'day' :        day,
                     'name':        name,
-                    'descripiton': description,
+                    'description': description,
                     'level':       level
                 });
     devices = []
     for allergen in allergens:
         devices.append(PollenkollSensor(allergen['name'], sensor, allergen))
     add_devices(devices, True)
-
 
 # pylint: disable=no-member
 class PollenkollSensor(Entity):
@@ -73,7 +75,7 @@ class PollenkollSensor(Entity):
         self._state      = data['level']
         self._day        = data['day']
         self._allergen   = data['name']
-        self._name       = "{} {} {} day {}".format(name, self._city, self._allergen, str(self._day))
+        self._name       = "{} {} day {}".format(name, self._city, str(self._day))
         self._attributes = data
         self._result     = None
 
@@ -106,3 +108,22 @@ class PollenkollSensor(Entity):
         if self._allergen in SENSOR_ICONS:
             return SENSOR_ICONS[self._allergen]
         return SENSOR_ICONS['default']
+
+    def update(self):
+        #update values
+        page             = requests.get('https://pollenkoll.se/pollenprognos/' + self._city)
+        self._result     = BeautifulSoup(page.content, "html.parser")
+        self._attributes = {}
+        for days in self._result.select('.pollen-city__day'):
+            day=days.get("data-day")
+            for item in days.select('.pollen-city__items .pollen-city__item'):
+                level       = item.get('data-level')
+                name        = item.select('.pollen-city__item-name')[0].text.strip()
+                description = item.select('.pollen-city__item-desc')[0].text
+                sensorName = "{} {} day {}".format(name, self._city, str(self._day))
+                if  self._name == sensorName:
+                    self._state = level
+                    self._attributes.update({"day": self._day})
+                    self._attributes.update({"name": name})
+                    self._attributes.update({"description": description})
+                    self._attributes.update({"level": level})
