@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup
-from datetime import timedelta
+from datetime import timedelta,datetime
 import requests, json
 
 import logging
@@ -59,6 +59,14 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
                     'description': description,
                     'level':       level
                 });
+                for zerolevel in days.select('.pollen-city__other-items .items span'):
+                    print(zerolevel)
+                    allergens.append({
+                        'day' :        day,
+                        'name':        zerolevel.text,
+                        'description': 'Inga halter rapporterade',
+                        'level':       0
+                    });
     devices = []
     for allergen in allergens:
         devices.append(PollenkollSensor(allergen['name'], sensor, allergen))
@@ -67,6 +75,9 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 # pylint: disable=no-member
 class PollenkollSensor(Entity):
     """Representation of a Pollen sensor."""
+
+    page = ""
+    updatedAt = datetime.now().timestamp()
 
     def __init__(self, name, sensor, data, day=0):
         """Initialize a Pollen sensor."""
@@ -111,8 +122,10 @@ class PollenkollSensor(Entity):
 
     def update(self):
         #update values
-        page             = requests.get('https://pollenkoll.se/pollenprognos/' + self._city)
-        self._result     = BeautifulSoup(page.content, "html.parser")
+        if not PollenkollSensor.page or (datetime.now().timestamp() - PollenkollSensor.updatedAt) >= (3600*4):
+            PollenkollSensor.page      = requests.get('https://pollenkoll.se/pollenprognos/' + self._city)
+            PollenkollSensor.updatedAt = datetime.now().timestamp()
+        self._result     = BeautifulSoup(PollenkollSensor.page.content, "html.parser")
         self._attributes = {}
         for days in self._result.select('.pollen-city__day'):
             day=days.get("data-day")
@@ -120,6 +133,18 @@ class PollenkollSensor(Entity):
                 level       = item.get('data-level')
                 name        = item.select('.pollen-city__item-name')[0].text.strip()
                 description = item.select('.pollen-city__item-desc')[0].text
+                sensorName = "{} {} day {}".format(name, self._city, str(self._day))
+                if  self._name == sensorName:
+                    self._state = level
+                    self._attributes.update({"day": self._day})
+                    self._attributes.update({"name": name})
+                    self._attributes.update({"description": description})
+                    self._attributes.update({"level": level})
+            for zerolevel in days.select('.pollen-city__other-items .items span'):
+                day         = day
+                description = 'Inga halter rapporterade'
+                level       = 0
+                name        = zerolevel.text
                 sensorName = "{} {} day {}".format(name, self._city, str(self._day))
                 if  self._name == sensorName:
                     self._state = level
