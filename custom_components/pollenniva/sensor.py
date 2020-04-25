@@ -133,10 +133,10 @@ class PollenkollSensor(Entity):
                 level       = item.get('data-level')
                 name        = item.select('.pollen-city__item-name')[0].text.strip()
                 description = item.select('.pollen-city__item-desc')[0].text
-                sensorName = "{} {} day {}".format(name, self._city, str(self._day))
+                sensorName = "{} {} day {}".format(name, self._city, day)
                 if  self._name == sensorName:
                     self._state = level
-                    self._attributes.update({"day": self._day})
+                    self._attributes.update({"day": day})
                     self._attributes.update({"name": name})
                     self._attributes.update({"description": description})
                     self._attributes.update({"level": level})
@@ -145,10 +145,10 @@ class PollenkollSensor(Entity):
                 description = 'Inga halter rapporterade'
                 level       = 0
                 name        = zerolevel.text
-                sensorName = "{} {} day {}".format(name, self._city, str(self._day))
+                sensorName = "{} {} day {}".format(name, self._city, day)
                 if  self._name == sensorName:
                     self._state = level
-                    self._attributes.update({"day": self._day})
+                    self._attributes.update({"day": day})
                     self._attributes.update({"name": name})
                     self._attributes.update({"description": description})
                     self._attributes.update({"level": level})
