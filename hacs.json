@@ -1,0 +1,6 @@
+{
+  "name": "Pollennivåer",
+  "country": "SE",
+  "domains": ["sensor"],
+  "homeassistant": "0.108.8"
+}
