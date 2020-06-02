@@ -5,8 +5,9 @@ import requests, json
 import logging
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.entity import Entity
-from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.helpers.entity import Entity, generate_entity_id
+
+from homeassistant.components.sensor import PLATFORM_SCHEMA, ENTITY_ID_FORMAT
 from homeassistant.const import (CONF_NAME)
 
 _LOGGER = logging.getLogger(__name__)
@@ -73,7 +74,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
                 });
     devices = []
     for allergen in allergens:
-        devices.append(PollenkollSensor(allergen['name'], sensor, allergen, textValue))
+        devices.append(PollenkollSensor(allergen['name'], sensor, allergen, textValue, hass))
     add_devices(devices, True)
 
 # pylint: disable=no-member
@@ -83,7 +84,7 @@ class PollenkollSensor(Entity):
     page = ""
     updatedAt = datetime.now().timestamp()
 
-    def __init__(self, name, sensor, data, textValue, day=0):
+    def __init__(self, name, sensor, data, textValue, hass, day=0):
         """Initialize a Pollen sensor."""
         self._textValue  = textValue
         self._item       = sensor
@@ -92,13 +93,50 @@ class PollenkollSensor(Entity):
         self._day        = data['day']
         self._allergen   = data['name']
         self._name       = "{} {} day {}".format(name, self._city, self._day)
+        self._entity_id  = generate_entity_id(ENTITY_ID_FORMAT, self._name, hass=hass)
+        translated_day   = self.translateDayNumber(int(self._day))
+        self._t_name     = "{}, {}".format(name, translated_day)
         self._attributes = data
         self._result     = None
 
+    def translateDayNumber(self, day):
+        today = datetime.today().weekday()
+        days_of_the_week = {
+            0: 'Måndag',
+            1: 'Tisdag',
+            2: 'Onsdag',
+            3: 'Torsdag',
+            4: 'Fredag',
+            5: 'Lördag',
+            6: 'Söndag'
+        }
+
+        translate_days = {
+            0: 'Idag',
+            1: 'Imorgon'
+        }
+
+        tomorrow = today+2
+        if tomorrow > 6:
+            tomorrow = tomorrow - 6
+        day_after_tomorrow = today+3
+        if day_after_tomorrow > 6:
+            day_after_tomorrow = day_after_tomorrow - 6
+
+        translate_days[2] = days_of_the_week[tomorrow]
+        translate_days[3] = days_of_the_week[day_after_tomorrow]
+
+        return translate_days[day]
+
     @property
-    def name(self):
+    def entity_id(self):
         """Return the name of the sensor."""
-        return self._name
+        return self._entity_id
+
+    @property
+    def friendly_name(self):
+        """Return the name of the sensor."""
+        return self._t_name
 
     @property
     def state(self):
@@ -136,29 +174,31 @@ class PollenkollSensor(Entity):
         for days in self._result.select('.pollen-city__day'):
             day=days.get("data-day")
             for item in days.select('.pollen-city__items .pollen-city__item'):
-                level       = item.get('data-level')
-                name        = item.select('.pollen-city__item-name')[0].text.strip()
-                description = item.select('.pollen-city__item-desc')[0].text
-                sensorName = "{} {} day {}".format(name, self._city, day)
+                level        = item.get('data-level')
+                name         = item.select('.pollen-city__item-name')[0].text.strip()
+                description  = item.select('.pollen-city__item-desc')[0].text
+                sensorName   = "{} {} day {}".format(name, self._city, day)
+                friendlyName = self._t_name
                 if self._textValue:
                     level = description
                 if  self._name == sensorName:
                     self._state = level
                     self._attributes.update({"day": day})
-                    self._attributes.update({"name": name})
+                    self._attributes.update({"friendly_name": friendlyName})
                     self._attributes.update({"description": description})
                     self._attributes.update({"level": level})
             for zerolevel in days.select('.pollen-city__other-items .items span'):
-                day         = day
-                description = 'Inga halter rapporterade'
-                level       = 0
-                name        = zerolevel.text
-                sensorName = "{} {} day {}".format(name, self._city, day)
+                day          = day
+                description  = 'Inga halter rapporterade'
+                level        = 0
+                name         = zerolevel.text
+                sensorName   = "{} {} day {}".format(name, self._city, day)
+                friendlyName = self._t_name
                 if self._textValue:
                     level = description
                 if  self._name == sensorName:
                     self._state = level
                     self._attributes.update({"day": day})
-                    self._attributes.update({"name": name})
                     self._attributes.update({"description": description})
                     self._attributes.update({"level": level})
+                    self._attributes.update({"friendly_name": friendlyName})
