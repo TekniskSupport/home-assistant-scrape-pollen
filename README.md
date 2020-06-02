@@ -8,6 +8,7 @@
 
 ```
 - platform: pollenniva
+  value_as_text: False
   sensors:
     - city: goteborg
 ```
