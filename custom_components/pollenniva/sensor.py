@@ -118,10 +118,10 @@ class PollenkollSensor(Entity):
 
         tomorrow = today+2
         if tomorrow > 6:
-            tomorrow = tomorrow - 6
+            tomorrow = tomorrow - 7
         day_after_tomorrow = today+3
         if day_after_tomorrow > 6:
-            day_after_tomorrow = day_after_tomorrow - 6
+            day_after_tomorrow = day_after_tomorrow - 7
 
         translate_days[2] = days_of_the_week[tomorrow]
         translate_days[3] = days_of_the_week[day_after_tomorrow]
