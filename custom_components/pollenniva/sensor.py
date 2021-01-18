@@ -82,8 +82,6 @@ class PollenkollSensor(Entity):
     """Representation of a Pollen sensor."""
 
     page = ""
-    updatedAt = datetime.now().timestamp()
-
     def __init__(self, name, sensor, data, textValue, hass, day=0):
         """Initialize a Pollen sensor."""
         self._textValue  = textValue
@@ -165,11 +163,9 @@ class PollenkollSensor(Entity):
 
     def update(self):
         #update values
-        if not PollenkollSensor.page or (datetime.now().timestamp() - PollenkollSensor.updatedAt) >= (3600*4):
-            PollenkollSensor.page      = requests.get('https://pollenkoll.se/pollenprognos/' + self._city)
-            PollenkollSensor.updatedAt = datetime.now().timestamp()
-        self._result     = BeautifulSoup(PollenkollSensor.page.content, "html.parser")
-        self._attributes = {}
+        PollenkollSensor.page = requests.get('https://pollenkoll.se/pollenprognos/' + self._city)
+        self._result          = BeautifulSoup(PollenkollSensor.page.content, "html.parser")
+        self._attributes      = {}
 
         for days in self._result.select('.pollen-city__day'):
             day=days.get("data-day")
