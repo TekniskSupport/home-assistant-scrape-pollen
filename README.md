@@ -1,5 +1,8 @@
 # Pollennivå
 
+### Deprecation warning; instead i recomend using:
+[https://github.com/JohNan/homeassistant-pollenprognos](https://github.com/JohNan/homeassistant-pollenprognos)
+
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)
 
 - place files in in [homeassistant-base]/custom_components/pollenniva
